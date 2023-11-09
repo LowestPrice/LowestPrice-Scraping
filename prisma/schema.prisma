@@ -1,0 +1,110 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-1.0.x"]
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  userId       Int       @id @default(autoincrement()) @map("id")
+  email        String    @unique
+  nickname     String
+  snsId        String
+  provider     String
+  image        String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime?
+  refreshToken String?   @db.Text
+  lastLogin    DateTime?
+
+  UserProduct  UserProduct[]
+  LikeMagazine LikeMagazine[]
+}
+
+model Category {
+  categoryId Int    @id @default(autoincrement()) @map("id")
+  categoryName       String @unique
+
+  ProductCategory ProductCategory[]
+}
+
+model ProductCategory {
+  productCategoryId Int @id @default(autoincrement()) @map("id")
+  ProductId         Int
+  CategoryId        Int
+
+  Product  Product  @relation(fields: [ProductId], references: [productId], onDelete: Cascade)
+  Category Category @relation(fields: [CategoryId], references: [categoryId], onDelete: Cascade)
+}
+
+model UserProduct {
+  userProductId Int      @id @default(autoincrement()) @map("id")
+  UserId        Int
+  ProductId     Int
+  createdAt     DateTime @default(now())
+  atPrice       Int?
+
+  User    User    @relation(fields: [UserId], references: [userId], onDelete: Cascade)
+  Product Product @relation(fields: [ProductId], references: [productId], onDelete: Cascade)
+}
+
+model Magazine {
+  magazineId Int       @id @default(autoincrement())
+  title      String
+  content    String?   @db.Text
+  mainImage  String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  deletedAt  DateTime?
+
+  LikeMagazine LikeMagazine[]
+}
+
+model LikeMagazine {
+  likeMagazineId Int      @id @default(autoincrement())
+  UserId         Int
+  MagazineId     Int
+  createdAt      DateTime @default(now())
+
+  User     User     @relation(fields: [UserId], references: [userId], onDelete: Cascade)
+  Magazine Magazine @relation(fields: [MagazineId], references: [magazineId], onDelete: Cascade)
+}
+
+model Product {
+  productId          Int       @id @default(autoincrement())
+  realId             BigInt?    
+  coupangItemId      BigInt
+  coupangVendorId    BigInt    @unique
+  productName        String
+  productImage       String
+  originalPrice      Int
+  currentPrice       Int?
+  discountRate       Int?
+  cardDiscount       Int?
+  productUrl         String
+  productPartnersUrl String?
+  isOutOfStock       Boolean
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  deletedAt          DateTime?
+
+  PriceHistory    PriceHistory[]
+  UserProduct     UserProduct[]
+  ProductCategory ProductCategory[]
+}
+
+model PriceHistory {
+  priceHistoryId Int      @id @default(autoincrement())
+  ProductId      Int
+  price          Int
+  createdAt      DateTime @default(now())
+
+  Product Product @relation(fields: [ProductId], references: [productId], onDelete: Cascade)
+}

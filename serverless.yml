@@ -1,0 +1,62 @@
+service: dynamic-pricing-service
+
+frameworkVersion: '3'
+useDotenv: true
+plugins:
+  - serverless-offline
+  - serverless-dotenv-plugin
+
+provider:
+  name: aws
+  region: ap-northeast-2
+  profile: dev
+  architecture: x86_64
+  environment:
+    ENV: ${env:ENV}
+    ECR_URI: ${env:ECR_URI}
+    DATABASE_URL: ${env:DATABASE_URL}
+    PRISMA_CLI_BINARY_TARGETS: native,rhel-openssl-1.0.x # 추가
+    PUPPETEER_EXECUTABLE_PATH: ${env:PUPPETEER_EXECUTABLE_PATH}
+  ecr:
+    images:
+      dynamic-pricing-image:
+        path: ./
+
+functions:
+  app:
+    memorySize: 1024
+    timeout: 600
+    image:
+      uri: ${env:ECR_URI}
+      command:
+        - '/app/dist/lambda.handler'
+      entryPoint:
+        - '/lambda-entrypoint.sh'
+    events:
+      - httpApi:
+          method: GET
+          path: /startScrapping
+      - schedule:
+          name: morningScrapping
+          description: 'Trigger scrapping at 11 AM every day'
+          rate: cron(0 11 * * ? *)
+          enabled: true
+      - schedule:
+          name: eveningScrapping
+          description: 'Trigger scrapping at 8 PM every day'
+          rate: cron(0 20 * * ? *)
+          enabled: true
+
+# 추가된 부분
+package:
+  patterns:
+    - '!node_modules/.prisma/client/libquery_engine-*'
+    - 'node_modules/.prisma/client/libquery_engine-rhel-*'
+    - '!node_modules/prisma/libquery_engine-*'
+    - '!node_modules/@prisma/engines/**'
+custom:
+  webpack:
+    packagerOptions:
+      scripts:
+        - prisma generate
+        - find . -name "libquery_engine-*" -not -name "libquery_engine-rhel-openssl-*" | xargs rm
